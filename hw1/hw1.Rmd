@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 In this homework, we will try to figure out what the difference is between these, and what the most extreme genes are. 
 
-## 0. Load the dataset
+## 0. Load the dataset  
 
 The given file has a header row, so we need to specify this in the function to load the dataset correctly.  
 The dataset is stored as a dataframe `genes_df`.  
@@ -29,7 +29,7 @@ genes_df <- read.table("gene_lengths_v2.txt", header=TRUE)
 summary(genes_df)
 ```
 
-## 1. The most common number of exons
+## 1. The most common number of exons  
 
 *Make a histogram that shows what the typical number of exons is.  Adjust the bins so that we can pinpoint exactly what number of exons that is the most common. Comment the plot.*
 
@@ -53,7 +53,7 @@ getmode <- function(v) {
 getmode(genes_df$exon_count)
 ```
 
-## 2. Total length of introns
+## 2. Total length of introns  
 
 *Add an additional column to the dataframe that contains the total length of introns for each gene*
 
@@ -62,7 +62,7 @@ genes_df$intron_length <- genes_df$genome_length - genes_df$mrna_length
 summary(genes_df$intron_length)
 ```
 
-## 3. The length of total exon and total intron
+## 3. The length of total exon and total intron  
 
 *Make histograms and boxplots showing the distribution of total exon and total intron lengths, all as subplots in the same larger plot, where each dataset have a different color.  On the histograms, the number of bins should be exactly the same, and the x-axis should have the same scale.*
 *Comment the plot – are exons larger than introns or vice versa?*
@@ -84,7 +84,7 @@ hist(genes_df$mrna_length[genes_df$mrna_length<100000], col=rgb(0,0,1,0.5), brea
 ```
 
 
-# 4. Hypothesis testing
+# 4. Hypothesis testing  
 
 *Are the mRNA lengths significantly longer than the total intron lengths, or is it the other way around? 
 
@@ -117,7 +117,7 @@ They deviate a lot from normality, so we can't use parametric t-test.
 wilcox.test(genes_df$exon_count, genes_df$intron_length, alternative="less")
 ```
 
-## 5. Correlation
+## 5. Correlation  
 
 *Continuing on the same question: is the total exon length more correlated to the total intron length than the number of exons? Show this both with a plot and with correlation scores. Comment on your result.*
 
@@ -138,7 +138,7 @@ summary(exonL_exonN)
 ```
 
 
-# 6. Longest total exon length
+# 6. Longest total exon length  
 
 *What gene has the longest (total) exon length? How long is this mRNA and how many exons does it have?  Do this in a single line of R (without using “;”).* 
 
@@ -146,7 +146,7 @@ summary(exonL_exonN)
 genes_df[genes_df$mrna_length == max(genes_df$mrna_length), ]
 ```
 
-# 7. Extremes removal
+# 7. Extremes removal  
 
 *In genomics, we often want to fish out extreme examples – like all very short genes, or all very long genes. It is often helpful to make a function to do these tasks – it saves time in the long run.*
 
