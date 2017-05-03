@@ -263,20 +263,22 @@ longest_mrna <- max(genes_df$mrna_length)
 count_genes <- function(mrna_length_vec, x1=0, x2=longest_mrna){
   # If both comparisons are true, it will return 1. Do this for all genes and get the sum. 
   count <- sum((x1 < mrna_length_vec) & (mrna_length_vec <= x2))
+  fraction <- count/length(mrna_length_vec)
+  return(fraction)
 }
 ```
 
 *Test this function with the mRNA lengths using the the five settings below: i) Using the default of x1 and x2; ii) Using the default of x2 and set x1=10000; iii) x1=1000 and x2=10000; iv) x1=100 and x2=1000; v) x1=0 and x2=100.*
 
 ``` r
-counts <- c()
-counts[1] <- count_genes(genes_df$mrna_length)
-counts[2] <- count_genes(genes_df$mrna_length, x1=10000)
-counts[3] <- count_genes(genes_df$mrna_length, x1=1000, x2=10000)
-counts[4] <- count_genes(genes_df$mrna_length, x1=100, x2=1000)
-counts[5] <- count_genes(genes_df$mrna_length, x1=0, x2=100)
+fractions <- c()
+fractions[1] <- count_genes(genes_df$mrna_length)
+fractions[2] <- count_genes(genes_df$mrna_length, x1=10000)
+fractions[3] <- count_genes(genes_df$mrna_length, x1=1000, x2=10000)
+fractions[4] <- count_genes(genes_df$mrna_length, x1=100, x2=1000)
+fractions[5] <- count_genes(genes_df$mrna_length, x1=0, x2=100)
 
-counts
+fractions
 ```
 
-    ## [1] 18489   209 16146  2134     0
+    ## [1] 1.00000000 0.01130402 0.87327600 0.11541998 0.00000000
