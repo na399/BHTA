@@ -34,13 +34,16 @@ summary(genes_df)
 *Make a histogram that shows what the typical number of exons is.  Adjust the bins so that we can pinpoint exactly what number of exons that is the most common. Comment the plot.*
 
 ```{r}
-hist(genes_df$exon_count, breaks = 50, main = "Histogram of the numbers of exons in a gene for the whole dataset")
+hist(genes_df$exon_count, 
+     breaks = max(genes_df$exon_count), 
+     main = "Histogram of the numbers of exons in a gene for the whole dataset")
 
 ```
 
 
 ```{r}
-hist(genes_df$exon_count[genes_df$exon_count<50], breaks = 30)
+hist(genes_df$exon_count[genes_df$exon_count<50], 
+     breaks = max(genes_df$exon_count[genes_df$exon_count<50]))
 ```
 
 ```{r}
@@ -69,8 +72,14 @@ summary(genes_df$intron_length)
 
 
 ```{r}
-hist(genes_df$intron_length,col=rgb(1,0,0,0.5), breaks = 50, main="The length of total exon (blue) and total intron (red)", xlab="length")
-hist(genes_df$mrna_length, col=rgb(0,0,1,0.5), breaks = 50, add=TRUE)
+hist(genes_df$intron_length, 
+     col=rgb(1,0,0,0.5), 
+     breaks = 50, 
+     main="The length of total exon (blue) and total intron (red)", xlab="length")
+hist(genes_df$mrna_length, 
+     col=rgb(0,0,1,0.5), 
+     breaks = 25, 
+     add=TRUE)
 ```
 
 Most of the introns are enormously larger than exons.
@@ -78,8 +87,15 @@ Most of the introns are enormously larger than exons.
 Visualise the distribution of those less than 100,000 bp in length.
 
 ```{r}
-hist(genes_df$intron_length[genes_df$intron_length<100000],col=rgb(1,0,0,0.5), breaks = 50, ylim = c(0,8000), main="The length of total exon (blue) and total intron (red)", xlab="length")
-hist(genes_df$mrna_length[genes_df$mrna_length<100000], col=rgb(0,0,1,0.5), breaks = 25, add=TRUE)
+hist(genes_df$intron_length[genes_df$intron_length<100000], 
+     col=rgb(1,0,0,0.5), 
+     breaks = 50, 
+     ylim = c(0,8000), 
+     main="The length of total exon (blue) and total intron (red)", xlab="length")
+hist(genes_df$mrna_length[genes_df$mrna_length<100000], 
+     col=rgb(0,0,1,0.5), 
+     breaks = 25, 
+     add=TRUE)
 
 ```
 
@@ -133,7 +149,11 @@ plot(mrna_length ~ exon_count, data = genes_df)
 abline(exonL_exonN, col="red")
 
 summary(exonL_intronL)
+par(mfrow=c(2,2))
+plot(exonL_intronL)
+
 summary(exonL_exonN)
+plot(exonL_exonN)
 
 ```
 
@@ -157,7 +177,9 @@ c.	A cutoff x2 which by default should be set to the longest (total) mrna length
 d.	Then, the function should count the number of mRNAs that are no less than (<=) x2 but larger than (>) x1; and finally return the fraction of this count over the total count of mRNAs.*
 
 ```{r}
-count_genes <- function(mrna_length_vec, x1=0, x2=43815){
+longest_mrna <- max(genes_df$mrna_length)
+count_genes <- function(mrna_length_vec, x1=0, x2=longest_mrna){
+  # If both comparisons are true, it will return 1. Do this for all genes and get the sum. 
   count <- sum((x1 < mrna_length_vec) & (mrna_length_vec <= x2))
 }
 ```
@@ -176,7 +198,7 @@ counts[1] <- count_genes(genes_df$mrna_length)
 counts[2] <- count_genes(genes_df$mrna_length, x1=10000)
 counts[3] <- count_genes(genes_df$mrna_length, x1=1000, x2=10000)
 counts[4] <- count_genes(genes_df$mrna_length, x1=100, x2=1000)
-counts[5] <- count_genes(genes_df$mrna_length, x1=0, x2=1000)
+counts[5] <- count_genes(genes_df$mrna_length, x1=0, x2=100)
 
 counts
 

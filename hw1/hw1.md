@@ -37,13 +37,16 @@ summary(genes_df)
 *Make a histogram that shows what the typical number of exons is. Adjust the bins so that we can pinpoint exactly what number of exons that is the most common. Comment the plot.*
 
 ``` r
-hist(genes_df$exon_count, breaks = 50, main = "Histogram of the numbers of exons in a gene for the whole dataset")
+hist(genes_df$exon_count, 
+     breaks = max(genes_df$exon_count), 
+     main = "Histogram of the numbers of exons in a gene for the whole dataset")
 ```
 
 ![](hw1_files/figure-markdown_github/unnamed-chunk-2-1.png)
 
 ``` r
-hist(genes_df$exon_count[genes_df$exon_count<50], breaks = 30)
+hist(genes_df$exon_count[genes_df$exon_count<50], 
+     breaks = max(genes_df$exon_count[genes_df$exon_count<50]))
 ```
 
 ![](hw1_files/figure-markdown_github/unnamed-chunk-3-1.png)
@@ -79,8 +82,14 @@ summary(genes_df$intron_length)
 *Make histograms and boxplots showing the distribution of total exon and total intron lengths, all as subplots in the same larger plot, where each dataset have a different color. On the histograms, the number of bins should be exactly the same, and the x-axis should have the same scale.* *Comment the plot – are exons larger than introns or vice versa?*
 
 ``` r
-hist(genes_df$intron_length,col=rgb(1,0,0,0.5), breaks = 50, main="The length of total exon (blue) and total intron (red)", xlab="length")
-hist(genes_df$mrna_length, col=rgb(0,0,1,0.5), breaks = 50, add=TRUE)
+hist(genes_df$intron_length, 
+     col=rgb(1,0,0,0.5), 
+     breaks = 50, 
+     main="The length of total exon (blue) and total intron (red)", xlab="length")
+hist(genes_df$mrna_length, 
+     col=rgb(0,0,1,0.5), 
+     breaks = 25, 
+     add=TRUE)
 ```
 
 ![](hw1_files/figure-markdown_github/unnamed-chunk-6-1.png)
@@ -90,8 +99,15 @@ Most of the introns are enormously larger than exons.
 Visualise the distribution of those less than 100,000 bp in length.
 
 ``` r
-hist(genes_df$intron_length[genes_df$intron_length<100000],col=rgb(1,0,0,0.5), breaks = 50, ylim = c(0,8000), main="The length of total exon (blue) and total intron (red)", xlab="length")
-hist(genes_df$mrna_length[genes_df$mrna_length<100000], col=rgb(0,0,1,0.5), breaks = 25, add=TRUE)
+hist(genes_df$intron_length[genes_df$intron_length<100000], 
+     col=rgb(1,0,0,0.5), 
+     breaks = 50, 
+     ylim = c(0,8000), 
+     main="The length of total exon (blue) and total intron (red)", xlab="length")
+hist(genes_df$mrna_length[genes_df$mrna_length<100000], 
+     col=rgb(0,0,1,0.5), 
+     breaks = 25, 
+     add=TRUE)
 ```
 
 ![](hw1_files/figure-markdown_github/unnamed-chunk-7-1.png)
@@ -188,6 +204,13 @@ summary(exonL_intronL)
     ## F-statistic:  2536 on 1 and 18487 DF,  p-value: < 2.2e-16
 
 ``` r
+par(mfrow=c(2,2))
+plot(exonL_intronL)
+```
+
+![](hw1_files/figure-markdown_github/unnamed-chunk-11-3.png)
+
+``` r
 summary(exonL_exonN)
 ```
 
@@ -210,6 +233,12 @@ summary(exonL_exonN)
     ## Multiple R-squared:  0.4084, Adjusted R-squared:  0.4083 
     ## F-statistic: 1.276e+04 on 1 and 18487 DF,  p-value: < 2.2e-16
 
+``` r
+plot(exonL_exonN)
+```
+
+![](hw1_files/figure-markdown_github/unnamed-chunk-11-4.png)
+
 6. Longest total exon length
 ============================
 
@@ -230,7 +259,9 @@ genes_df[genes_df$mrna_length == max(genes_df$mrna_length), ]
 *Make a function called “count\_genes” that takes two inputs: a. A vector with mRNA lengths b. A cutoff x1 which by default should be set to 0 c. A cutoff x2 which by default should be set to the longest (total) mrna length of the input vector, as you did in “6)”. d. Then, the function should count the number of mRNAs that are no less than (&lt;=) x2 but larger than (&gt;) x1; and finally return the fraction of this count over the total count of mRNAs.*
 
 ``` r
-count_genes <- function(mrna_length_vec, x1=0, x2=43815){
+longest_mrna <- max(genes_df$mrna_length)
+count_genes <- function(mrna_length_vec, x1=0, x2=longest_mrna){
+  # If both comparisons are true, it will return 1. Do this for all genes and get the sum. 
   count <- sum((x1 < mrna_length_vec) & (mrna_length_vec <= x2))
 }
 ```
@@ -243,9 +274,9 @@ counts[1] <- count_genes(genes_df$mrna_length)
 counts[2] <- count_genes(genes_df$mrna_length, x1=10000)
 counts[3] <- count_genes(genes_df$mrna_length, x1=1000, x2=10000)
 counts[4] <- count_genes(genes_df$mrna_length, x1=100, x2=1000)
-counts[5] <- count_genes(genes_df$mrna_length, x1=0, x2=1000)
+counts[5] <- count_genes(genes_df$mrna_length, x1=0, x2=100)
 
 counts
 ```
 
-    ## [1] 18489   209 16146  2134  2134
+    ## [1] 18489   209 16146  2134     0
