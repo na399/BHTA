@@ -146,33 +146,37 @@ Therefore, the mRNA lengths are significantly shorter than the intron lengths.
 *Continuing on the same question: is the total exon length more correlated to the total intron length than the number of exons? Show this both with a plot and with correlation scores. Comment on your result.*
 
 ```{r}
-plot(mrna_length ~ intron_length, data = genes_df)
 exonL_intronL = lm(mrna_length ~ intron_length, data = genes_df)
+exonL_exonN = lm(mrna_length ~ exon_count, data = genes_df)
+
+
+plot(mrna_length ~ intron_length, data = genes_df)
 abline(exonL_intronL, col="red")
-cor(genes_df$mrna_length, genes_df$intron_length, method="spearman")
+
+plot(mrna_length ~ exon_count, data = genes_df)
+abline(exonL_exonN, col="red")
+
+summary(exonL_intronL)
+par(mfrow=c(2,2))
+plot(exonL_intronL)
+
+summary(exonL_exonN)
+plot(exonL_exonN)
+
 ```
+
 
 ```{r}
-plot(mrna_length ~ exon_count, data = genes_df)
-exonL_exonN = lm(mrna_length ~ exon_count, data = genes_df)
-abline(exonL_exonN, col="red")
 cor(genes_df$mrna_length, genes_df$exon_count, method="spearman")
+cor(genes_df$mrna_length, genes_df$exon_count, method="pearson")
 ```
-
-As all parameters (mRNA lenghts, the number of exons per gene, and intron lengths) are not normally distributed, we use non-parametric Spearman's correlation.
-
-The correlation between mRNA lenghts and intron lengths is 0.5367173.
-The correlation between mRNA lenghts and the number of exons per gene is 0.5407801.
-
-The correlation values are highly similar. However, from the plots, the mRNA lenghts appear to be more correlated to the number of exons than intron length, but this is not represented by the correlation values.
-
 
 # 6. Longest total exon length  
 
 *What gene has the longest (total) exon length? How long is this mRNA and how many exons does it have?  Do this in a single line of R (without using “;”).* 
 
 ```{r}
-genes_df[genes_df$mrna_length == max(genes_df$mrna_length), c(1,2,4)]
+genes_df[genes_df$mrna_length == max(genes_df$mrna_length), ]
 ```
 
 # 7. Extremes removal  
@@ -186,9 +190,12 @@ c.	A cutoff x2 which by default should be set to the longest (total) mrna length
 d.	Then, the function should count the number of mRNAs that are no less than (<=) x2 but larger than (>) x1; and finally return the fraction of this count over the total count of mRNAs.*
 
 ```{r}
-count_genes <- function(mrna_length_vec, x1=0, x2= max(mrna_length_vec)){
-  return(length(mrna_length_vec[(x1 < mrna_length_vec) & (mrna_length_vec <= x2)])
-         /length(mrna_length_vec))
+longest_mrna <- max(genes_df$mrna_length)
+count_genes <- function(mrna_length_vec, x1=0, x2=longest_mrna){
+  # If both comparisons are true, it will return 1. Do this for all genes and get the sum. 
+  count <- sum((x1 < mrna_length_vec) & (mrna_length_vec <= x2))
+  fraction <- count/length(mrna_length_vec)
+  return(fraction)
 }
 ```
 

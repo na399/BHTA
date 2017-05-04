@@ -37,19 +37,14 @@ summary(genes_df)
 *Make a histogram that shows what the typical number of exons is. Adjust the bins so that we can pinpoint exactly what number of exons that is the most common. Comment the plot.*
 
 ``` r
-hist(genes_df$exon_count, 
-     breaks = max(genes_df$exon_count), 
-     main = "Histogram of the numbers of exons in a gene for the whole dataset")
+hist(genes_df$exon_count,
+     breaks = c(0:max(genes_df$exon_count)), 
+     xlim = c(0,max(genes_df$exon_count)),
+     main = "Histogram of the numbers of exons per gene",
+     xlab = "number of exons")
 ```
 
 ![](hw1_files/figure-markdown_github/unnamed-chunk-2-1.png)
-
-``` r
-hist(genes_df$exon_count[genes_df$exon_count<50], 
-     breaks = max(genes_df$exon_count[genes_df$exon_count<50]))
-```
-
-![](hw1_files/figure-markdown_github/unnamed-chunk-3-1.png)
 
 ``` r
 # from https://www.tutorialspoint.com/r/r_mean_median_mode.htm
@@ -62,6 +57,8 @@ getmode(genes_df$exon_count)
 ```
 
     ## [1] 4
+
+The histogram shows that the most common number of exons per gene is 4 exons, which is also confirmed by the mode function. The distribution of the number of exons is right-skewed. Half of the genes have less than 10 exons (median).
 
 2. Total length of introns
 --------------------------
@@ -81,55 +78,52 @@ summary(genes_df$intron_length)
 
 *Make histograms and boxplots showing the distribution of total exon and total intron lengths, all as subplots in the same larger plot, where each dataset have a different color. On the histograms, the number of bins should be exactly the same, and the x-axis should have the same scale.* *Comment the plot – are exons larger than introns or vice versa?*
 
+**We chose not to make subplots because they are not as illustrative as the overlaying plots below**
+
 ``` r
-hist(genes_df$intron_length, 
-     col=rgb(1,0,0,0.5), 
-     breaks = 50, 
-     main="The length of total exon (blue) and total intron (red)", xlab="length")
 hist(genes_df$mrna_length, 
      col=rgb(0,0,1,0.5), 
-     breaks = 25, 
+     breaks=seq(0,2500000,by=10000), 
+     main="The length of total exon (blue) and total intron (red)", xlab="length"
+     )
+hist(genes_df$intron_length, 
+     col=rgb(1,0,0,0.5), 
+     breaks=seq(0,2500000,by=10000), 
+     add=TRUE)
+```
+
+![](hw1_files/figure-markdown_github/unnamed-chunk-5-1.png)
+
+Most of the introns are enormously larger than exons.
+
+Visualise the distribution of those less than 50,000 bp in length.
+
+``` r
+hist(genes_df$mrna_length[genes_df$mrna_length<50000], 
+     col=rgb(0,0,1,0.5), 
+     breaks=seq(0,50000,by=1000),
+     main="The length of total exon (blue) and total intron (red)", xlab="length")
+hist(genes_df$intron_length[genes_df$intron_length<50000], 
+     col=rgb(1,0,0,0.5), 
+     breaks=seq(0,50000,by=1000), 
      add=TRUE)
 ```
 
 ![](hw1_files/figure-markdown_github/unnamed-chunk-6-1.png)
 
-Most of the introns are enormously larger than exons.
-
-Visualise the distribution of those less than 100,000 bp in length.
-
 ``` r
-hist(genes_df$intron_length[genes_df$intron_length<100000], 
-     col=rgb(1,0,0,0.5), 
-     breaks = 50, 
-     ylim = c(0,8000), 
-     main="The length of total exon (blue) and total intron (red)", xlab="length")
-hist(genes_df$mrna_length[genes_df$mrna_length<100000], 
-     col=rgb(0,0,1,0.5), 
-     breaks = 25, 
-     add=TRUE)
+boxplot(genes_df$mrna_length, genes_df$intron_length, col=c('blue', 'red'),
+        names=c("exon length", "intron length"))
 ```
 
 ![](hw1_files/figure-markdown_github/unnamed-chunk-7-1.png)
+
+Histograms and boxplots show that introns are mostly longer than exons. The boxplots show that the intron lengths span a larger range.
 
 4. Hypothesis testing
 =====================
 
 \*Are the mRNA lengths significantly longer than the total intron lengths, or is it the other way around?
-
-**H0:** the mRNA lengths are equal to or longer than the total intron lengths **H1:** The mRNA lengths significantly shorter than the total intron lengths.
-
-``` r
-boxplot(cbind(genes_df$mrna_length, genes_df$intron_length))
-```
-
-![](hw1_files/figure-markdown_github/unnamed-chunk-8-1.png)
-
-``` r
-boxplot(genes_df$mrna_length)
-```
-
-![](hw1_files/figure-markdown_github/unnamed-chunk-8-2.png)
 
 *test normality*
 
@@ -142,20 +136,26 @@ qqnorm(genes_df$intron_length, main="intron length")
 qqline(genes_df$intron_length, col="red")
 ```
 
-![](hw1_files/figure-markdown_github/unnamed-chunk-9-1.png)
+![](hw1_files/figure-markdown_github/unnamed-chunk-8-1.png)
 
-They deviate a lot from normality, so we can't use parametric t-test.
+They deviate a lot from normality, so we cannot use parametric t-test. Two-sample Wilcoxon test, as known as Mann-Whitney test, is used instead.
+
+**H0:** The mRNA lengths are equal to or longer than the intron lengths.
+**H1:** The mRNA lengths are significantly shorter than the intron lengths.
 
 ``` r
-wilcox.test(genes_df$exon_count, genes_df$intron_length, alternative="less")
+wilcox.test(genes_df$mrna_length, genes_df$intron_length, alternative = "less")
 ```
 
     ## 
     ##  Wilcoxon rank sum test with continuity correction
     ## 
-    ## data:  genes_df$exon_count and genes_df$intron_length
-    ## W = 23160000, p-value < 2.2e-16
+    ## data:  genes_df$mrna_length and genes_df$intron_length
+    ## W = 58458000, p-value < 2.2e-16
     ## alternative hypothesis: true location shift is less than 0
+
+As the p-value is 2.2\*10^-16, which is less than 0.05, the null hypothesis is rejected.
+Therefore, the mRNA lengths are significantly shorter than the intron lengths.
 
 5. Correlation
 --------------
@@ -163,81 +163,38 @@ wilcox.test(genes_df$exon_count, genes_df$intron_length, alternative="less")
 *Continuing on the same question: is the total exon length more correlated to the total intron length than the number of exons? Show this both with a plot and with correlation scores. Comment on your result.*
 
 ``` r
-exonL_intronL = lm(mrna_length ~ intron_length, data = genes_df)
-exonL_exonN = lm(mrna_length ~ exon_count, data = genes_df)
-
-
 plot(mrna_length ~ intron_length, data = genes_df)
+exonL_intronL = lm(mrna_length ~ intron_length, data = genes_df)
 abline(exonL_intronL, col="red")
+```
+
+![](hw1_files/figure-markdown_github/unnamed-chunk-10-1.png)
+
+``` r
+cor(genes_df$mrna_length, genes_df$intron_length, method="spearman")
+```
+
+    ## [1] 0.5367173
+
+``` r
+plot(mrna_length ~ exon_count, data = genes_df)
+exonL_exonN = lm(mrna_length ~ exon_count, data = genes_df)
+abline(exonL_exonN, col="red")
 ```
 
 ![](hw1_files/figure-markdown_github/unnamed-chunk-11-1.png)
 
 ``` r
-plot(mrna_length ~ exon_count, data = genes_df)
-abline(exonL_exonN, col="red")
+cor(genes_df$mrna_length, genes_df$exon_count, method="spearman")
 ```
 
-![](hw1_files/figure-markdown_github/unnamed-chunk-11-2.png)
+    ## [1] 0.5407801
 
-``` r
-summary(exonL_intronL)
-```
+As all parameters (mRNA lenghts, the number of exons per gene, and intron lengths) are not normally distributed, we use non-parametric Spearman's correlation.
 
-    ## 
-    ## Call:
-    ## lm(formula = mrna_length ~ intron_length, data = genes_df)
-    ## 
-    ## Residuals:
-    ##    Min     1Q Median     3Q    Max 
-    ## -11257  -1216   -410    717  40708 
-    ## 
-    ## Coefficients:
-    ##                Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)   2.529e+03  1.560e+01  162.08   <2e-16 ***
-    ## intron_length 6.517e-03  1.294e-04   50.36   <2e-16 ***
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ## Residual standard error: 1914 on 18487 degrees of freedom
-    ## Multiple R-squared:  0.1206, Adjusted R-squared:  0.1206 
-    ## F-statistic:  2536 on 1 and 18487 DF,  p-value: < 2.2e-16
+The correlation between mRNA lenghts and intron lengths is 0.5367173. The correlation between mRNA lenghts and the number of exons per gene is 0.5407801.
 
-``` r
-par(mfrow=c(2,2))
-plot(exonL_intronL)
-```
-
-![](hw1_files/figure-markdown_github/unnamed-chunk-11-3.png)
-
-``` r
-summary(exonL_exonN)
-```
-
-    ## 
-    ## Call:
-    ## lm(formula = mrna_length ~ exon_count, data = genes_df)
-    ## 
-    ## Residuals:
-    ##     Min      1Q  Median      3Q     Max 
-    ## -8425.0 -1044.0  -407.6   617.4 30799.9 
-    ## 
-    ## Coefficients:
-    ##             Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept) 1475.206     16.887   87.36   <2e-16 ***
-    ## exon_count   137.380      1.216  112.96   <2e-16 ***
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ## Residual standard error: 1570 on 18487 degrees of freedom
-    ## Multiple R-squared:  0.4084, Adjusted R-squared:  0.4083 
-    ## F-statistic: 1.276e+04 on 1 and 18487 DF,  p-value: < 2.2e-16
-
-``` r
-plot(exonL_exonN)
-```
-
-![](hw1_files/figure-markdown_github/unnamed-chunk-11-4.png)
+The correlation values are highly similar. However, from the plots, the mRNA lenghts appear to be more correlated to the number of exons than intron length, but this is not represented by the correlation values.
 
 6. Longest total exon length
 ============================
@@ -245,11 +202,11 @@ plot(exonL_exonN)
 *What gene has the longest (total) exon length? How long is this mRNA and how many exons does it have? Do this in a single line of R (without using “;”).*
 
 ``` r
-genes_df[genes_df$mrna_length == max(genes_df$mrna_length), ]
+genes_df[genes_df$mrna_length == max(genes_df$mrna_length), c(1,2,4)]
 ```
 
-    ##       name mrna_length genome_length exon_count intron_length
-    ## 8385 MUC16       43815        132498         84         88683
+    ##       name mrna_length exon_count
+    ## 8385 MUC16       43815         84
 
 7. Extremes removal
 ===================
@@ -259,26 +216,40 @@ genes_df[genes_df$mrna_length == max(genes_df$mrna_length), ]
 *Make a function called “count\_genes” that takes two inputs: a. A vector with mRNA lengths b. A cutoff x1 which by default should be set to 0 c. A cutoff x2 which by default should be set to the longest (total) mrna length of the input vector, as you did in “6)”. d. Then, the function should count the number of mRNAs that are no less than (&lt;=) x2 but larger than (&gt;) x1; and finally return the fraction of this count over the total count of mRNAs.*
 
 ``` r
-longest_mrna <- max(genes_df$mrna_length)
-count_genes <- function(mrna_length_vec, x1=0, x2=longest_mrna){
-  # If both comparisons are true, it will return 1. Do this for all genes and get the sum. 
-  count <- sum((x1 < mrna_length_vec) & (mrna_length_vec <= x2))
-  fraction <- count/length(mrna_length_vec)
-  return(fraction)
+count_genes <- function(mrna_length_vec, x1=0, x2= max(mrna_length_vec)){
+  return(length(mrna_length_vec[(x1 < mrna_length_vec) & (mrna_length_vec <= x2)])
+         /length(mrna_length_vec))
 }
 ```
 
 *Test this function with the mRNA lengths using the the five settings below: i) Using the default of x1 and x2; ii) Using the default of x2 and set x1=10000; iii) x1=1000 and x2=10000; iv) x1=100 and x2=1000; v) x1=0 and x2=100.*
 
 ``` r
-fractions <- c()
-fractions[1] <- count_genes(genes_df$mrna_length)
-fractions[2] <- count_genes(genes_df$mrna_length, x1=10000)
-fractions[3] <- count_genes(genes_df$mrna_length, x1=1000, x2=10000)
-fractions[4] <- count_genes(genes_df$mrna_length, x1=100, x2=1000)
-fractions[5] <- count_genes(genes_df$mrna_length, x1=0, x2=100)
-
-fractions
+count_genes(genes_df$mrna_length)
 ```
 
-    ## [1] 1.00000000 0.01130402 0.87327600 0.11541998 0.00000000
+    ## [1] 1
+
+``` r
+count_genes(genes_df$mrna_length, x1=10000)
+```
+
+    ## [1] 0.01130402
+
+``` r
+count_genes(genes_df$mrna_length, x1=1000, x2=10000)
+```
+
+    ## [1] 0.873276
+
+``` r
+count_genes(genes_df$mrna_length, x1=100, x2=1000)
+```
+
+    ## [1] 0.11542
+
+``` r
+count_genes(genes_df$mrna_length, x1=0, x2=100)
+```
+
+    ## [1] 0
