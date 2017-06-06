@@ -1,0 +1,187 @@
+---
+title: "hw3"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1.2
+
+To be able to use parametric t-test, the samples must be normally distributed.
+We used shapiro normality test to determine that. 
+
+H0 is the expression values (5 values from each condition of each probes) are normally distributed.
+Ha is the expression values (5 values from each condition of each probes) are not normally distributed.
+
+```{r}
+hiv_df=read.table('data_for_hw3/data_for_part_1/normalized_data.txt')
+
+# shapiro test probe by probe
+norm_p_vals_hiv <- sapply(1:nrow(hiv_df), function(x) shapiro.test(as.numeric(hiv_df[x, 1:5]))$p.value) 
+norm_p_vals_con <- sapply(1:nrow(hiv_df), function(x) shapiro.test(as.numeric(hiv_df[x, 6:10]))$p.value) 
+
+# find the percentages of probes that have H0 rejected at p = 0.05
+sum(norm_p_vals_hiv <= 0.05)/length(norm_p_vals_hiv)*100
+sum(norm_p_vals_con <= 0.05)/length(norm_p_vals_con)*100
+```
+
+In the HIV group, 8.78 % of probes do not have normally distributed expression values, while it is 5.61 % in the control group. 
+
+For the simplicity of the following analyses, we proceed with parametric t-test (with caution).
+
+
+H0 is no difference in mean between healthy individuals and HIV patients. 
+H1 is difference in mean between healthy individuals and HIV patients. 
+
+```{r}
+p_vals=sapply(1: nrow(hiv_df), function(x) t.test(hiv_df[x, 1:5], hiv_df[x, 6:10])$p.value) 
+```
+
+
+## 1.3
+
+```{r}
+#Expected number of false positives:
+0.05 * nrow(hiv_df) 
+#The actual number of genes with a p-value below 0.05:
+sum(p_vals < 0.05) 
+```
+
+## 1.4
+
+```{r}
+bonferroni <- p.adjust(p_vals, method = "bonferroni") 
+n_bonferroni <- sum(bonferroni < 0.2)  # for fdr method  
+fdr <- p.adjust(p_vals, method="BH")  
+n_fdr <- sum(fdr < 0.2) 
+```
+
+## 1.5
+
+```{r}
+mean.hiv <- sapply(1:nrow(hiv_df), function(x) mean(as.numeric(hiv_df[x, 1:5]))) 
+mean.con <- sapply(1:nrow(hiv_df), function(x) mean(as.numeric(hiv_df[x, 6:10]))) 
+foldChange <- log2(mean.hiv) - log2(mean.con)   
+```
+
+## 1.6
+
+```{r}
+foldChange[fdr < 0.2]
+#all are positives:up-regulated for hiv?
+
+```
+
+```{r}
+HIV_mean <- apply(hiv_df[1:5], 1, mean)
+healthy_mean <- apply(hiv_df[6:10], 1, mean)
+hiv_df$change <- log2(HIV_mean)-log2(healthy_mean)
+
+```
+
+# 3
+
+Read the supplied 3 CuffDiff result files (”gene differential expression testing”, ”transcript differential expression testing” and “Splicing differential expression testing”) into R as three data.frames (one for each). Note that the files provided are different from what you are expected to get if you solved part 2, so the results should not be compared. 
+
+1) The unique transcript id in the transcript data.frame is “test_id” (which is also a column in the gene data.frame). Change the column name (“test_id”) to ”transcript_id” to enable us to differentiate between them.
+
+
+```{r}
+transcript_DE <- read.table('data_for_hw3/data_for_part_3/cuffdiff_transcript_differential_expression.txt', head=TRUE)
+
+gene_DE <- read.table('data_for_hw3/data_for_part_3/cuffdiff_gene_differential_expression.txt', head=TRUE)
+
+splicing_DE <- read.table('data_for_hw3/data_for_part_3/cuffdiff_splicing_differential_expression.txt', head=TRUE)
+
+colnames(transcript_DE)[colnames(transcript_DE)=='test_id'] <- "transcript_id"
+```
+
+2) Make two new data.frames that only contains genes/transcripts that are expressed in at least 1 condition. For each data.frame make this in one line of R code without using the semicolon (;). Use these data.frames in the rest of the assignment.
+
+```{r}
+gene_DE_new <- subset(gene_DE, value_1 > 0 | value_2 > 0)
+transcripts_DE_new <- subset(transcript_DE, value_1 > 0 | value_2 > 0)
+```
+
+
+
+3) How many genes and how many transcripts were expressed? How many genes and how many transcripts were significantly differentially expressed between conditions?
+
+The number of genes and transcripts expressed were 26 and 98, respectively
+
+```{r}
+nrow(gene_DE_new)
+nrow(transcripts_DE_new)
+```
+
+The number of significantly differentially expressed genes and transcripts were 13 and 11, respectively
+
+```{r}
+sum(gene_DE_new$p_value < 0.05)
+sum(transcripts_DE_new$p_value < 0.05)
+```
+
+4) Make two new data.frames (one for gene, one for transcripts) where the transcript data.frame only contains the transcript_id, gene_id, value_1 and value_2 columns and the gene data.frame only have the gene_id, gene, value_1, value_2 columns. Use the merge() function to combine these two data.frames, based on gene ids. Use the suffix parameter to make the resulting column names easily understandable. How many rows does this new data.frame contain? How many columns?
+
+```{r}
+gene_DE_selected <- subset(gene_DE_new, select=c(gene_id, gene, value_1, value_2))
+
+transcripts_DE_selected <- subset(transcripts_DE_new, select=c(transcript_id, gene_id, value_1, value_2))
+
+merged_DE <- merge(gene_DE_selected, transcripts_DE_selected, by='gene_id', suffixes = c('gene', 'transcript'))
+
+nrow(merged_DE)
+
+ncol(merged_DE)
+
+```
+
+5*) For all transcripts calculate the Isoform Fraction values (IF values) and the corresponding dIF values. Do any of these calculation results in NAs? Explain why you could get NAs and discuss whether this should be corrected (by for example setting it to 0 or 100).
+
+```{r}
+merged_DE$IF_wildtype <- merged_DE$value_1transcript/merged_DE$value_1gene
+merged_DE$IF_knockdown <- merged_DE$value_2transcript/merged_DE$value_2gene
+
+merged_DE <- na.omit(merged_DE)
+
+merged_DE$dIF <- merged_DE$IF_knockdown-merged_DE$IF_wildtype 
+
+
+
+
+```
+
+6*) What is the average (mean) and median dIF value? Compare the two values and discuss what it enables you to say about the distribution of dIF values.
+
+```{r}
+summary(merged_DE$dIF)
+boxplot(merged_DE$dIF, ylab = "dIF")
+```
+
+7) Use R to subset the merged data.frame to only contain genes with potential isoform switching by identifying genes with dIF > +/- 0.25 (0.25 is an arbitrary (but large) value). Furthermore add the p_value from the “Splicing differential expression testing” to the data.frame using the match() function. 
+
+```{r}
+isoform_switch <- subset(merged_DE, dIF > 0.25  | dIF < -0.25)
+
+isoform_switch$p_value <- splicing_DE$p_value[match(isoform_switch$gene_id, splicing_DE$gene_id)]
+```
+
+8) For the switch in the gene with the lowest p_value report 
+A) the transcript ids 
+B) the gene name (not the gene_id), if the gene have multiple names just report the first. 
+C) The dIF values. 
+D) The pvalue. Include the R code to extract exactly this data.
+
+```{r}
+isoform_switch[isoform_switch$p_value == min(isoform_switch$p_value), c('transcript_id', 'gene', 'dIF', 'p_value')]
+```
+
+9) Analyze the gene with a switch: What does the gene do (a few sentences with references). Take a look at the gene in the genome browser (upload and use the supplied GTF file instead of the one you made in part 2). Make sure to compare it to the knownGenes annotation you provided as guide. What is the difference between the transcripts involved in the isoform switches? Compare the alternatively spliced regions to the “Pfam in UCSC Gene” data track. Rearrange the tracks so the order is: 1) your track, 2) UCSC genes and 3) Pfam Domains. Report you findings including screenshots. Include an explanation of why it is (potentially) interesting to compare to the pfam track.
+
+What does the gene do:
+
+The TCONS_00000022 isoform is identical to predicted gene in the UCSC track consisting of four exons, one of which is non-coding. The TCONS_00000021 isoform, however, only consists of two exons, and is lacking one of the coding exons. According to the Pfam track the gene has one conserved protein domain, that is encoded by the two coding exons. 
+
+

@@ -1,0 +1,77 @@
+---
+title: "Homework 2"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{bash}
+# Pre-process the bed files by sorting instances
+bedtools sort -i ERa_hg18.bed > out/ERa_hg18_sorted.bed
+bedtools sort -i ERb_hg18.bed > out/ERb_hg18_sorted.bed
+
+# Calculate genome coverage
+#bedtools genomecov -i out/ERa_hg18_sorted.bed -g hg18_chrom_sizes.txt > out/ERa_hg18_coverage.txt
+
+#bedtools genomecov -i out/ERb_hg18_sorted.bed -g hg18_chrom_sizes.txt > out/ERb_hg18_coverage.txt
+```
+
+
+```{r}
+# Load packages
+library("ggplot2")
+library("VennDiagram")
+```
+
+
+
+```{r}
+# Read the coverage files
+df_ERa <- read.table("out/ERa_hg18_coverage.txt")
+df_ERb <- read.table("out/ERb_hg18_coverage.txt")
+# Add a column with the site name
+df_ERa$site <- "ERa"
+df_ERb$site <- "ERb"
+# Combine 2 dataframes
+df_ER <- rbind(df_ERa, df_ERb)
+# Edit column names
+colnames(df_ER) <- c("chr", "depth", "coverage_size", "chr_size", "fraction", "site")
+# Remove rows of 'genome'
+df_ER <- df_ER[df_ER$chr != 'genome', ]
+# Keep only rows with coverage
+df_ER_hits <- df_ER[df_ER$depth == 1, ]
+# Plot
+p <- ggplot(df_ER_hits, aes(chr, fraction))
+p + geom_bar(stat = "identity", aes(fill = site), position = "dodge")
+```
+
+
+```{bash}
+wc -l out/ERa_hg18_sorted.bed
+# A = 581
+
+wc -l out/ERb_hg18_sorted.bed
+# B = 485
+
+bedtools intersect -a out/ERa_hg18_sorted.bed -b out/ERb_hg18_sorted.bed -c | awk '$4 == 1' | wc -l
+# A and B = 345
+
+bedtools intersect -a out/ERa_hg18_sorted.bed -b out/ERb_hg18_sorted.bed -v | wc -l
+# A and not B = 236
+
+bedtools intersect -b out/ERa_hg18_sorted.bed -a out/ERb_hg18_sorted.bed -v | wc -l
+# B and not A = 140
+```
+
+
+```{r}
+
+venn.plot <- draw.pairwise.venn(581, 485, 345, 
+                                c("ERa", "ERb"), fill = c("salmon", "turquoise"));
+grid.draw(venn.plot);
+grid.newpage();
+```

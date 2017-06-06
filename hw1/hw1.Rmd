@@ -1,6 +1,6 @@
 ---
 title: "Homework 1"
-output: github_document
+output: word_document
 ---
 
 ```{r setup, include=FALSE}
@@ -71,43 +71,77 @@ summary(genes_df$intron_length)
 *Make histograms and boxplots showing the distribution of total exon and total intron lengths, all as subplots in the same larger plot, where each dataset have a different color.  On the histograms, the number of bins should be exactly the same, and the x-axis should have the same scale.*
 *Comment the plot – are exons larger than introns or vice versa?*
 
-**We chose not to make subplots because they are not as illustrative as the overlaying plots below**
 
 ```{r}
-hist(genes_df$mrna_length, 
-     col=rgb(0,0,1,0.5), 
-     breaks=seq(0,2500000,by=10000), 
-     main="The length of total exon (blue) and total intron (red)", xlab="length"
-     )
-hist(genes_df$intron_length, 
-     col=rgb(1,0,0,0.5), 
-     breaks=seq(0,2500000,by=10000), 
-     add=TRUE)
-
+max(genes_df$mrna_length)
+max(genes_df$intron_length)
 ```
 
-Most of the introns are enormously larger than exons.
-
-Visualise the distribution of those less than 50,000 bp in length.
 
 ```{r}
+par(mfrow=c(2,2))
+hist(genes_df$mrna_length, 
+     col="blue", 
+     breaks=seq(0,2500000,by=10000), 
+     main="exon", xlab="length (nt)"
+     )
+hist(genes_df$intron_length, 
+     col="red", 
+     breaks=seq(0,2500000,by=10000),
+     main="intron", xlab="length (nt)")
+
 hist(genes_df$mrna_length[genes_df$mrna_length<50000], 
      col=rgb(0,0,1,0.5), 
      breaks=seq(0,50000,by=1000),
-     main="The length of total exon (blue) and total intron (red)", xlab="length")
+     main="lengths less than 50,000 nt",
+     xlab="length (nt)")
 hist(genes_df$intron_length[genes_df$intron_length<50000], 
      col=rgb(1,0,0,0.5), 
      breaks=seq(0,50000,by=1000), 
      add=TRUE)
 
+boxplot(genes_df$mrna_length, genes_df$intron_length, col=c('blue', 'red'),
+        names=c("exon length", "intron length"), ylab="length (nt)")
 
 ```
+
 
 ```{r}
-boxplot(genes_df$mrna_length, genes_df$intron_length, col=c('blue', 'red'),
-        names=c("exon length", "intron length"))
+library("ggplot2")
+library("gridExtra")
+library("reshape2")
+
+# use the maximum value of the intron lengths and 0 as x-axis limits
+plot1 <- ggplot(data=genes_df, aes(mrna_length))  +
+  geom_histogram(breaks=seq(0, max(genes_df$intron_length), by=10000), fill="salmon") +
+  labs(title="mRNA lengths", x = "Length (nt)")
+
+plot2 <- ggplot(data=genes_df, aes(intron_length))  +
+  geom_histogram(breaks=seq(0, max(genes_df$intron_length), by=10000), fill="turquoise") +
+  labs(title="intron lengths", x = "Length (nt)")
+
+# reshape the dataframe
+genes_df2 <- melt(genes_df, id.vars = "name")
+genes_df2 <- genes_df2[(genes_df2$variable == "mrna_length" | genes_df2$variable == "intron_length"), ]
+# filter only length <= 50000
+genes_df3 <- genes_df2[genes_df2$value <= 50000, ]
+
+plot3 <- ggplot(genes_df3, aes(x=value, fill=variable)) +
+  geom_histogram(alpha=0.7, position="identity") + theme(legend.position="top") + 
+  labs(title="Lengths less than 50,000 nt", x = "Length (nt)")
+  
+plot4 <- ggplot(genes_df2, aes(x=variable, y=value, fill=variable)) +
+  geom_boxplot() + theme(legend.position="none") + 
+  labs(title="Lengths of mRNA and intron", y = "Length (nt)")
+
+grid.arrange(plot1, plot2, plot3, plot4, ncol=2)
 
 ```
+
+To get a better visualization of the distributions of short exons and introns, we plotted overlaying histograms of those less than 50,000 nt in length.
+
+The length of total exon (blue) and total intron (red)
+
 
 Histograms and boxplots show that introns are mostly longer than exons. The boxplots show that the intron lengths span a larger range. 
 
@@ -135,7 +169,7 @@ They deviate a lot from normality, so we cannot use parametric t-test. Two-sampl
 
 
 ```{r}
-wilcox.test(genes_df$mrna_length, genes_df$intron_length, alternative = "less")
+wilcox.test(genes_df$mrna_length, genes_df$intron_length, alternative = "less", paired = FALSE)
 ```
 
 As the p-value is 2.2\*10^-16, which is less than 0.05, the null hypothesis is rejected.  
@@ -146,16 +180,20 @@ Therefore, the mRNA lengths are significantly shorter than the intron lengths.
 *Continuing on the same question: is the total exon length more correlated to the total intron length than the number of exons? Show this both with a plot and with correlation scores. Comment on your result.*
 
 ```{r}
+par(mfrow=c(1,2))
 plot(mrna_length ~ intron_length, data = genes_df)
-exonL_intronL = lm(mrna_length ~ intron_length, data = genes_df)
-abline(exonL_intronL, col="red")
-cor(genes_df$mrna_length, genes_df$intron_length, method="spearman")
+plot(mrna_length ~ exon_count, data = genes_df)
 ```
 
 ```{r}
-plot(mrna_length ~ exon_count, data = genes_df)
-exonL_exonN = lm(mrna_length ~ exon_count, data = genes_df)
-abline(exonL_exonN, col="red")
+par(mfrow=c(1,2))
+total = nrow(genes_df)
+plot(rank(genes_df$mrna_length) ~ rank(genes_df$intron_length))
+plot(rank(genes_df$mrna_length) ~ rank(genes_df$exon_count), alpha=0.1)
+```
+
+```{r}
+cor(genes_df$mrna_length, genes_df$intron_length, method="spearman")
 cor(genes_df$mrna_length, genes_df$exon_count, method="spearman")
 ```
 
