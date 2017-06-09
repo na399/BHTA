@@ -1,10 +1,10 @@
 # CAGE Analysis
 
-# Heatmap
+## Heatmap
 
 [R markdown](CAGE_heatmap.Rmd)
 
-# Tissue-specific
+## Tissue-specific
 
 I used Python to determine tissue-specific promoters based on:
 
