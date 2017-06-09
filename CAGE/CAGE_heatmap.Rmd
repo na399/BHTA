@@ -1,0 +1,172 @@
+---
+title: "Untitled"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(ggplot2)
+library(gplots)
+library(pheatmap)
+```
+
+Load the dataset
+
+```{r}
+CAGE <- read.table("htbinf_cage_tpms.txt", header=T)
+```
+
+```{r}
+summary(CAGE)
+```
+
+We have 1000 tags from 7 tissues.
+
+Plot PCA
+```{r}
+
+CAGE_val <- CAGE[4:10]
+CAGE_val <- scale(CAGE_val)
+pca_CAGE <- prcomp(CAGE_val)
+
+plot_CAGE <- data.frame(pca_CAGE$x)
+
+qplot(PC1, PC2, data=plot_CAGE)
+
+plot3d(plot_CAGE[1:3])
+
+```
+
+
+
+
+
+
+```{r}
+CAGE_val <- CAGE[4:10]
+CAGE_val_t <- as.matrix(t(CAGE_val))
+CAGE_val_t_s <- scale(CAGE_val_t)
+heatmap.2(CAGE_val_t_s, trace="none", col="redblue")
+
+heatmap.2(CAGE_val_t_s, trace="none", col="redblue", 
+          hclustfun = function (x) hclust(x, method="average"))
+
+pheatmap(CAGE_val_t_s)
+
+```
+
+
+
+
+
+
+Load the CSV file from Python
+
+```{r}
+source("http://bioconductor.org/workflows.R")
+workflowInstall("liftOver")
+```
+
+```{r}
+library(biomaRt)
+library(GenomicRanges)
+library(rtracklayer)
+```
+
+
+
+```{r}
+CAGE_tissue <- read.csv("cage_tissue.csv")
+
+```
+
+
+
+```{r}
+
+chain = import.chain("mm8ToMm10.over.chain")
+
+
+tissue <- GRanges(CAGE_tissue$location)
+tissue10 = liftOver(tissue, chain)
+tissue10 = unlist(tissue10)
+tissue10
+```
+
+```{r}
+seqlevels(tissue10) <- sub("chr", "", seqlevels(tissue10))
+regions <- paste(seqnames(tissue10), start(tissue10), end(tissue10), sep=":")
+regions
+```
+
+
+```{r}
+mart <- useMart(biomart="ensembl", dataset="mmusculus_gene_ensembl")
+
+```
+
+```{r}
+results <- getBM(attributes = c("unigene","chromosome_name", 
+                                "start_position","end_position"),
+                 filters = c("chromosomal_region"),
+                 values=regions,
+                 mart=mart)
+results
+```
+
+
+```{r}
+library("gProfileR")
+```
+
+
+```{r}
+GO <- gprofiler(results$unigene, organism = "mmusculus", significant = F, src_filter = 'KEGG')
+```
+
+
+
+
+
+Let's do this for tissue-specific CAGE
+
+```{r}
+CAGE_tissue <- read.csv("cage_tissue.csv")
+
+tissue_names = c('cer', 'emb', 'liv', 'lun', 'mac', 'som', 'vis')
+
+for(name in tissue_names){
+  tissue <- GRanges(CAGE_tissue$location[CAGE_tissue$tissue==name])
+  tissue10 = liftOver(tissue, chain)
+  tissue10 = unlist(tissue10)
+  
+  seqlevels(tissue10) <- sub("chr", "", seqlevels(tissue10))
+  regions <- paste(seqnames(tissue10), start(tissue10), end(tissue10), sep=":")
+  
+  results <- getBM(attributes = c("unigene","chromosome_name", 
+                                  "start_position","end_position"),
+                   filters = c("chromosomal_region"),
+                   values=regions,
+                   mart=mart)
+  
+  GO <- gprofiler(results$unigene, organism = "mmusculus", 
+                  significant = F, src_filter = 'KEGG')
+    
+  assign(paste("t_s_", name, sep = ""), GO)  # t_s_ = tissue_specific_   
+}
+
+
+```
+
+```{r}
+for(name in tissue_names){
+  df = paste("t_s_", name, sep = "")
+  df_ = eval(parse(text = df))
+  write.csv(df_, file = paste(df, ".csv", sep=""))
+  
+}
+```

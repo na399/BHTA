@@ -1,0 +1,115 @@
+---
+title: "CAGE GO Analysis"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+source("http://bioconductor.org/workflows.R")
+workflowInstall("liftOver")
+```
+
+```{r}
+library(biomaRt)
+library(GenomicRanges)
+library(rtracklayer)
+library(gProfileR)
+```
+
+
+
+Load the CSV file from Python that have labels for tissue-specific IDs 
+
+```{r}
+CAGE_tissue <- read.csv("cage_tissue.csv")
+
+```
+
+Map tag locations from mm8 to mm10 assembly
+
+```{r}
+
+chain = import.chain("mm8ToMm10.over.chain")
+
+
+tissue <- GRanges(CAGE_tissue$location)
+tissue10 = liftOver(tissue, chain)
+tissue10 = unlist(tissue10)
+tissue10
+```
+
+Reformat the locations
+
+```{r}
+seqlevels(tissue10) <- sub("chr", "", seqlevels(tissue10))
+regions <- paste(seqnames(tissue10), start(tissue10), end(tissue10), sep=":")
+regions
+```
+
+Get Gene IDs from the given locations
+
+```{r}
+mart <- useMart(biomart="ensembl", dataset="mmusculus_gene_ensembl")
+```
+
+```{r}
+results <- getBM(attributes = c("unigene","chromosome_name", 
+                                "start_position","end_position"),
+                 filters = c("chromosomal_region"),
+                 values=regions,
+                 mart=mart)
+results
+```
+
+Analyse GO (KEGG domains)
+
+```{r}
+GO <- gprofiler(results$unigene, organism = "mmusculus", significant = F, src_filter = 'KEGG')
+```
+
+
+Let's do this for tissue-specific CAGE
+
+```{r}
+CAGE_tissue <- read.csv("cage_tissue_t.csv")
+
+tissue_names = c('cer', 'emb', 'liv', 'lun', 'mac', 'som', 'vis')
+
+for(name in tissue_names){
+  tissue <- GRanges(CAGE_tissue$location[CAGE_tissue$tissue==name])
+  
+  tissue10 = liftOver(tissue, chain)
+  tissue10 = unlist(tissue10)
+  
+  seqlevels(tissue10) <- sub("chr", "", seqlevels(tissue10))
+  regions <- paste(seqnames(tissue10), start(tissue10), end(tissue10), sep=":")
+  
+  results <- getBM(attributes = c("unigene","chromosome_name", 
+                                  "start_position","end_position"),
+                   filters = c("chromosomal_region"),
+                   values=regions,
+                   mart=mart)
+  
+  GO <- gprofiler(results$unigene, organism = "mmusculus", 
+                  significant = F, src_filter = 'KEGG')
+    
+  assign(paste("t_s_t_", name, sep = ""), GO)  # t_s_ = tissue_specific_   
+}
+
+
+```
+
+Save the results as CSV
+
+```{r}
+for(name in tissue_names){
+  df = paste("t_s_", name, sep = "")
+  df_ = eval(parse(text = df))
+  write.csv(df_, file = paste(df, ".csv", sep=""))
+}
+```
